@@ -80,8 +80,16 @@ fn main() -> Result<()> {
   let total_cells = N * N * N;
   println!("📊 LUT Statistics:");
   println!("   Total cells: {}", total_cells);
-  println!("   Filled cells: {} ({:.2}%)", filled_cells, (filled_cells as f64 / total_cells as f64) * 100.0);
-  println!("   Empty cells: {} ({:.2}%)", empty_cells, (empty_cells as f64 / total_cells as f64) * 100.0);
+  println!(
+    "   Filled cells: {} ({:.2}%)",
+    filled_cells,
+    (filled_cells as f64 / total_cells as f64) * 100.0
+  );
+  println!(
+    "   Empty cells: {} ({:.2}%)",
+    empty_cells,
+    (empty_cells as f64 / total_cells as f64) * 100.0
+  );
 
   // Show sample counts
   println!("\n📈 Sample distribution:");
@@ -105,14 +113,17 @@ fn main() -> Result<()> {
   if filled_cells > 0 {
     println!("   Max samples per cell: {}", max_samples);
     println!("   Min samples per cell: {}", min_samples);
-    println!("   Avg samples per filled cell: {:.2}", total_samples as f64 / filled_cells as f64);
+    println!(
+      "   Avg samples per filled cell: {:.2}",
+      total_samples as f64 / filled_cells as f64
+    );
   }
 
   // Step 4: Fill empty cells using inverse-distance weighted interpolation
   if empty_cells > 0 {
     println!("\n🔧 Filling empty cells with inverse-distance weighted interpolation...");
     let mut filled_count = 0;
-    
+
     for i in 0..N {
       for j in 0..N {
         for k in 0..N {
@@ -120,13 +131,13 @@ fn main() -> Result<()> {
           if count[i][j][k] > 0 {
             continue;
           }
-          
+
           // Search for non-empty neighbors with increasing radius
           let mut found = false;
           for radius in 1..=N {
             let mut weighted_sum = [0.0f32; 3];
             let mut weight_sum = 0.0f32;
-            
+
             // Search all cells within this radius
             for di in -(radius as i32)..=(radius as i32) {
               for dj in -(radius as i32)..=(radius as i32) {
@@ -134,29 +145,35 @@ fn main() -> Result<()> {
                   let ni = i as i32 + di;
                   let nj = j as i32 + dj;
                   let nk = k as i32 + dk;
-                  
+
                   // Skip out-of-bounds
-                  if ni < 0 || nj < 0 || nk < 0 || ni >= N as i32 || nj >= N as i32 || nk >= N as i32 {
+                  if ni < 0
+                    || nj < 0
+                    || nk < 0
+                    || ni >= N as i32
+                    || nj >= N as i32
+                    || nk >= N as i32
+                  {
                     continue;
                   }
-                  
+
                   let ni = ni as usize;
                   let nj = nj as usize;
                   let nk = nk as usize;
-                  
+
                   // Skip empty neighbors
                   if count[ni][nj][nk] == 0 {
                     continue;
                   }
-                  
+
                   // Compute distance and weight
                   let distance = ((di * di + dj * dj + dk * dk) as f32).sqrt();
                   if distance == 0.0 {
                     continue;
                   }
-                  
+
                   let weight = 1.0 / distance;
-                  
+
                   // Accumulate weighted values
                   weighted_sum[0] += lut[ni][nj][nk][0] * weight;
                   weighted_sum[1] += lut[ni][nj][nk][1] * weight;
@@ -165,7 +182,7 @@ fn main() -> Result<()> {
                 }
               }
             }
-            
+
             // If we found at least one neighbor, fill the cell
             if weight_sum > 0.0 {
               lut[i][j][k][0] = weighted_sum[0] / weight_sum;
@@ -176,7 +193,7 @@ fn main() -> Result<()> {
               break;
             }
           }
-          
+
           if !found {
             // Fallback: use identity mapping if no neighbors found
             lut[i][j][k][0] = i as f32 / (N - 1) as f32;
@@ -187,21 +204,25 @@ fn main() -> Result<()> {
         }
       }
     }
-    
+
     println!("   ✅ Filled {} empty cells", filled_count);
   }
-  
+
   // Final LUT composition statistics
   println!("\n📊 Final LUT Composition:");
   let cells_from_data = filled_cells;
   let cells_interpolated = if empty_cells > 0 { empty_cells } else { 0 };
-  
-  println!("   From training data: {} ({:.2}%)", 
-    cells_from_data, 
-    (cells_from_data as f64 / total_cells as f64) * 100.0);
-  println!("   From interpolation: {} ({:.2}%)", 
-    cells_interpolated, 
-    (cells_interpolated as f64 / total_cells as f64) * 100.0);
+
+  println!(
+    "   From training data: {} ({:.2}%)",
+    cells_from_data,
+    (cells_from_data as f64 / total_cells as f64) * 100.0
+  );
+  println!(
+    "   From interpolation: {} ({:.2}%)",
+    cells_interpolated,
+    (cells_interpolated as f64 / total_cells as f64) * 100.0
+  );
   println!("   ─────────────────────────────────");
   println!("   Total completion:   {} (100.00%)", total_cells);
 
@@ -220,12 +241,30 @@ fn main() -> Result<()> {
 
   // Show some sample LUT values
   println!("\n🔍 Sample LUT values:");
-  println!("   Black [0,0,0] -> [{:.4}, {:.4}, {:.4}] (count: {})",
-    lut[0][0][0][0], lut[0][0][0][1], lut[0][0][0][2], count[0][0][0]);
-  println!("   White [{},{},{}] -> [{:.4}, {:.4}, {:.4}] (count: {})",
-    N-1, N-1, N-1, lut[N-1][N-1][N-1][0], lut[N-1][N-1][N-1][1], lut[N-1][N-1][N-1][2], count[N-1][N-1][N-1]);
-  println!("   Mid [{},{},{}] -> [{:.4}, {:.4}, {:.4}] (count: {})",
-    N/2, N/2, N/2, lut[N/2][N/2][N/2][0], lut[N/2][N/2][N/2][1], lut[N/2][N/2][N/2][2], count[N/2][N/2][N/2]);
+  println!(
+    "   Black [0,0,0] -> [{:.4}, {:.4}, {:.4}] (count: {})",
+    lut[0][0][0][0], lut[0][0][0][1], lut[0][0][0][2], count[0][0][0]
+  );
+  println!(
+    "   White [{},{},{}] -> [{:.4}, {:.4}, {:.4}] (count: {})",
+    N - 1,
+    N - 1,
+    N - 1,
+    lut[N - 1][N - 1][N - 1][0],
+    lut[N - 1][N - 1][N - 1][1],
+    lut[N - 1][N - 1][N - 1][2],
+    count[N - 1][N - 1][N - 1]
+  );
+  println!(
+    "   Mid [{},{},{}] -> [{:.4}, {:.4}, {:.4}] (count: {})",
+    N / 2,
+    N / 2,
+    N / 2,
+    lut[N / 2][N / 2][N / 2][0],
+    lut[N / 2][N / 2][N / 2][1],
+    lut[N / 2][N / 2][N / 2][2],
+    count[N / 2][N / 2][N / 2]
+  );
 
   Ok(())
 }
@@ -233,19 +272,19 @@ fn main() -> Result<()> {
 /// Apply brightness bias correction in LAB space to all LUT cells
 fn apply_brightness_correction(lut: &mut Vec<Vec<Vec<[f32; 3]>>>) -> Result<()> {
   let n = lut.len();
-  
+
   for i in 0..n {
     for j in 0..n {
       for k in 0..n {
         let rgb = lut[i][j][k];
-        
+
         // Convert RGB to LAB
         let mut bgr_mat = unsafe { Mat::new_rows_cols(1, 1, core::CV_32FC3)? };
         let pixel = bgr_mat.at_2d_mut::<core::Vec3f>(0, 0)?;
         pixel[0] = rgb[2]; // B
         pixel[1] = rgb[1]; // G
         pixel[2] = rgb[0]; // R
-        
+
         let mut lab_mat = Mat::default();
         imgproc::cvt_color(
           &bgr_mat,
@@ -254,13 +293,13 @@ fn apply_brightness_correction(lut: &mut Vec<Vec<Vec<[f32; 3]>>>) -> Result<()> 
           0,
           core::AlgorithmHint::ALGO_HINT_DEFAULT,
         )?;
-        
+
         let lab_pixel = lab_mat.at_2d_mut::<core::Vec3f>(0, 0)?;
-        
+
         // Apply correction to L* channel
         // OpenCV LAB: L is [0, 100], but stored as float
         lab_pixel[0] = (lab_pixel[0] - CALIBRATED_BIAS_L).clamp(0.0, 100.0);
-        
+
         // Convert back to RGB
         let mut corrected_bgr = Mat::default();
         imgproc::cvt_color(
@@ -270,9 +309,9 @@ fn apply_brightness_correction(lut: &mut Vec<Vec<Vec<[f32; 3]>>>) -> Result<()> 
           0,
           core::AlgorithmHint::ALGO_HINT_DEFAULT,
         )?;
-        
+
         let corrected_pixel = corrected_bgr.at_2d::<core::Vec3f>(0, 0)?;
-        
+
         // Update LUT with corrected values (clamped to [0, 1])
         lut[i][j][k][0] = corrected_pixel[2].clamp(0.0, 1.0); // R
         lut[i][j][k][1] = corrected_pixel[1].clamp(0.0, 1.0); // G
@@ -280,7 +319,7 @@ fn apply_brightness_correction(lut: &mut Vec<Vec<Vec<[f32; 3]>>>) -> Result<()> 
       }
     }
   }
-  
+
   Ok(())
 }
 
@@ -289,8 +328,15 @@ fn write_cube_file(mut file: File, lut: &Vec<Vec<Vec<[f32; 3]>>>) -> Result<()> 
   use std::io::Write;
 
   // Write header
-  writeln!(file, "# 3D LUT for Classic Chrome Film Simulation (Bias Corrected)")?;
-  writeln!(file, "# Generated from pixel comparison data with {:+.3} L* bias correction", CALIBRATED_BIAS_L)?;
+  writeln!(
+    file,
+    "# 3D LUT for Classic Chrome Film Simulation (Bias Corrected)"
+  )?;
+  writeln!(
+    file,
+    "# Generated from pixel comparison data with {:+.3} L* bias correction",
+    CALIBRATED_BIAS_L
+  )?;
   writeln!(file, "TITLE \"Classic Chrome LUT - Corrected\"")?;
   writeln!(file, "LUT_3D_SIZE {}", N)?;
   writeln!(file)?;
