@@ -20,6 +20,14 @@ Complete step-by-step guide for creating and using a 3D LUT for Fujifilm Classic
 
 This workflow creates a **3D LUT (Look-Up Table)** that transforms standard JPEG images to match Fujifilm's Classic Chrome film simulation. The process uses machine learning from paired images (standard + Classic Chrome) to build a color transformation model.
 
+### Method Organization
+
+This guide documents **Method 1: Stratified LAB + IDW Interpolation**
+- All binaries are located in `src/bin/first_method/`
+- This approach uses stratified LAB sampling for training data collection
+- Includes inverse-distance weighted (IDW) interpolation for LUT filling
+- Future alternative methods will be organized in separate directories
+
 ### Current Quality (8 Training Images)
 - **PSNR**: 43.03 dB (Excellent, professional-grade)
 - **ΔE**: 1.28 (perceptible only through close observation)
@@ -218,7 +226,7 @@ cargo run --bin apply_lut
 - Saves result to `outputs/lut_33.jpg`
 
 **To Process Different Images:**
-Edit `src/bin/apply_lut.rs` lines 186-188:
+Edit `src/bin/first_method/apply_lut.rs` lines 186-188:
 ```rust
 let lut_path = "outputs/lut_33.cube";
 let input_path = "source/compare/standard/YOUR_IMAGE.JPG";  // ← Change this
@@ -405,20 +413,26 @@ cargo run --bin analyze_brightness_bias
 
 ## Understanding Each File
 
+### File Structure
+
+All workflow binaries are organized in `src/bin/first_method/`:
+- This is the **first method** using stratified LAB sampling + IDW interpolation
+- Future methods (e.g., neural networks, alternative algorithms) will have separate subdirectories
+
 ### Core Production Files
 
-| File | Purpose | Required For |
-|------|---------|--------------|
-| `stratified_compare_pixel.rs` | Generate training data with stratified LAB sampling | LUT creation |
-| `build_lut.rs` | Build 33³ LUT with IDW + bias correction | LUT creation |
-| `apply_lut.rs` | Apply LUT to images with trilinear interpolation | Production use |
+| File | Location | Purpose | Required For |
+|------|----------|---------|--------------|
+| `stratified_compare_pixel.rs` | `src/bin/first_method/` | Generate training data with stratified LAB sampling | LUT creation |
+| `build_lut.rs` | `src/bin/first_method/` | Build 33³ LUT with IDW + bias correction | LUT creation |
+| `apply_lut.rs` | `src/bin/first_method/` | Apply LUT to images with trilinear interpolation | Production use |
 
 ### Validation Files (Optional)
 
-| File | Purpose | Required For |
-|------|---------|--------------|
-| `compare_lut.rs` | Compute quality metrics (MSE, PSNR, ΔE) | Development validation |
-| `analyze_brightness_bias.rs` | Detect brightness bias in LAB space | Development validation |
+| File | Location | Purpose | Required For |
+|------|----------|---------|--------------|
+| `compare_lut.rs` | `src/bin/first_method/` | Compute quality metrics (MSE, PSNR, ΔE) | Development validation |
+| `analyze_brightness_bias.rs` | `src/bin/first_method/` | Detect brightness bias in LAB space | Development validation |
 
 ### Legacy Files (Not Used)
 
@@ -534,7 +548,7 @@ cargo run --bin analyze_brightness_bias
 
 **Step 2: Update Calibration Constant**
 
-Edit `src/bin/build_lut.rs` line 26:
+Edit `src/bin/first_method/build_lut.rs` line 26:
 ```rust
 // Before:
 const CALIBRATED_BIAS_L: f32 = 1.489;  // Based on 8 images
@@ -789,14 +803,14 @@ cargo run --bin analyze_brightness_bias
 
 ### File Summary
 
-**Core Files:**
-- ✅ `stratified_compare_pixel.rs` - Training data
-- ✅ `build_lut.rs` - LUT creation
-- ✅ `apply_lut.rs` - Production use
+**Core Files** (`src/bin/first_method/`):
+- ✅ `stratified_compare_pixel.rs` - Training data generation
+- ✅ `build_lut.rs` - LUT creation with bias correction
+- ✅ `apply_lut.rs` - Production use (apply LUT to images)
 
-**Validation Files:**
-- 🔍 `compare_lut.rs` - Quality metrics
-- 🔍 `analyze_brightness_bias.rs` - Bias detection
+**Validation Files** (`src/bin/first_method/`):
+- 🔍 `compare_lut.rs` - Quality metrics (PSNR, ΔE, MSE)
+- 🔍 `analyze_brightness_bias.rs` - Bias detection in LAB space
 
 **Output Files:**
 - `outputs/pixel_comparison.csv` - Training samples
