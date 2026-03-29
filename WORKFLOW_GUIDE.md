@@ -1,6 +1,6 @@
 # Classic Chrome LUT Workflow Guide
 
-Complete step-by-step guide for creating and using a 3D LUT for Fujifilm Classic Chrome film simulation.
+Complete step-by-step guide for creating and using a 3D LUT for Classic Chrome film simulation.
 
 ---
 
@@ -18,85 +18,180 @@ Complete step-by-step guide for creating and using a 3D LUT for Fujifilm Classic
 
 ## Overview
 
-This workflow creates a **3D LUT (Look-Up Table)** that transforms standard JPEG images to match Fujifilm's Classic Chrome film simulation. The process uses machine learning from paired images (standard + Classic Chrome) to build a color transformation model.
+This workflow creates a **3D LUT (Look-Up Table)** that transforms standard JPEG images to match Classic Chrome film simulation. The process uses machine learning from paired images (standard + Classic Chrome) to build a color transformation model.
 
 ### Method Organization
 
-This guide documents **Method 1: Stratified LAB + IDW Interpolation**
-- All binaries are located in `src/bin/first_method/`
-- This approach uses stratified LAB sampling for training data collection
-- Includes inverse-distance weighted (IDW) interpolation for LUT filling
-- Future alternative methods will be organized in separate directories
+This guide documents **two complementary methods** for Classic Chrome film simulation:
 
-### Current Quality (8 Training Images)
-- **PSNR**: 43.03 dB (Excellent, professional-grade)
-- **ΔE**: 1.28 (perceptible only through close observation)
-- **Brightness Bias**: -0.03% (essentially eliminated)
-- **Status**: Production-ready ✅
+#### Method 1: Direct 3D LUT (Stratified LAB + IDW Interpolation)
+- **Location**: `src/bin/first_method/`
+- **Approach**: Build a single 33×33×33 3D LUT directly from training data
+- **Technique**: Stratified LAB sampling + Inverse-Distance Weighted interpolation
+- **Advantages**: Simple, industry-standard .cube format, excellent compatibility
+- **File Size**: 948 KB
+- **Quality**: PSNR 43.06 dB, ΔE 1.27
+
+#### Method 2: Matrix + Tone + Residual Pipeline
+- **Location**: `src/bin/second_method/`
+- **Approach**: Decompose transformation into 3 stages: Matrix → Tone Curve → Residual LUT
+- **Technique**: SVD least-squares + 256-bin tone curve + 17³ residual LUT
+- **Advantages**: 6.9× smaller, interpretable components, editable stages
+- **File Size**: 138 KB (85% smaller)
+- **Quality**: PSNR 43.06 dB, ΔE 1.21
+
+**Choose Method 1 if**: You need maximum compatibility with color grading software (DaVinci Resolve, Adobe), simple single-stage processing, or industry-standard workflow.
+
+**Choose Method 2 if**: You need compact file size, want to understand/modify the transformation, need artistic control over individual stages, or are building custom tools.
 
 ---
 
 ## Complete Workflow
 
+### Method 1: Direct 3D LUT
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    DEVELOPMENT WORKFLOW                          │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    DEVELOPMENT WORKFLOW                  │
+└──────────────────────────────────────────────────────────┘
 
 Phase 1: Training Data Generation (One-time)
 ┌──────────────────────────────────────────────────────────┐
-│ stratified_compare_pixel                                  │
-│ ├─ Input: Standard images + Fujifilm Classic Chrome     │
-│ └─ Output: pixel_comparison.csv (103,427 samples)       │
+│ stratified_compare_pixel                                 │
+│ ├─ Input: Standard images + Classic Chrome               │
+│ └─ Output: pixel_comparison.csv (103,427 samples)        │
 └──────────────────────────────────────────────────────────┘
                             ↓
 Phase 2: LUT Creation (Core)
 ┌──────────────────────────────────────────────────────────┐
-│ build_lut                                                 │
-│ ├─ Input: pixel_comparison.csv                          │
-│ ├─ Process: IDW interpolation + 1.489 bias correction   │
-│ └─ Output: lut_33.cube (33×33×33 LUT, ready to use)    │
+│ build_lut                                                │
+│ ├─ Input: pixel_comparison.csv                           │
+│ ├─ Process: IDW interpolation + 1.489 bias correction    │
+│ └─ Output: lut_33.cube (33×33×33 LUT, ready to use)      │
 └──────────────────────────────────────────────────────────┘
                             ↓
 Phase 3: Production Use (Core)
 ┌──────────────────────────────────────────────────────────┐
-│ apply_lut                                                 │
-│ ├─ Input: Any standard image + lut_33.cube              │
-│ ├─ Process: Trilinear interpolation                     │
-│ └─ Output: Classic Chrome image                         │
+│ apply_lut                                                │
+│ ├─ Input: Any standard image + lut_33.cube               │
+│ ├─ Process: Trilinear interpolation                      │
+│ └─ Output: Classic Chrome image                          │
 └──────────────────────────────────────────────────────────┘
                             ↓
 Phase 4: Validation (Optional - Development Only)
 ┌──────────────────────────────────────────────────────────┐
-│ compare_lut                                               │
-│ ├─ Computes: MSE, PSNR, Delta E                         │
-│ └─ Requires: Ground truth (Fujifilm images)             │
+│ compare_lut                                              │
+│ ├─ Computes: MSE, PSNR, Delta E                          │
+│ └─ Requires: Ground truth (Classic Chrome images)        │
 ├──────────────────────────────────────────────────────────┤
-│ analyze_brightness_bias                                   │
-│ ├─ Detects: Systematic brightness bias                  │
-│ └─ Requires: Ground truth (Fujifilm images)             │
+│ analyze_brightness_bias                                  │
+│ ├─ Detects: Systematic brightness bias                   │
+│ └─ Requires: Ground truth (Classic Chrome images)        │
 └──────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────┐
-│                    PRODUCTION WORKFLOW                           │
-└─────────────────────────────────────────────────────────────────┘
 
 ┌──────────────────────────────────────────────────────────┐
-│ apply_lut (only this!)                                    │
-│ ├─ Input: Standard image + lut_33.cube                  │
-│ └─ Output: Classic Chrome image                         │
+│                    PRODUCTION WORKFLOW                   │
 └──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│ apply_lut (only this!)                                   │
+│ ├─ Input: Standard image + lut_33.cube                   │
+│ └─ Output: Classic Chrome image                          │
+└──────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Method 2: Matrix + Tone + Residual Pipeline
+
+```
+┌──────────────────────────────────────────────────────────┐
+│                    DEVELOPMENT WORKFLOW                  │
+└──────────────────────────────────────────────────────────┘
+
+Phase 1: Training Data Generation (Shared with Method 1)
+┌──────────────────────────────────────────────────────────┐
+│ first_method/stratified_compare_pixel                    │
+│ ├─ Input: Standard images + Classic Chrome               │
+│ └─ Output: outputs/pixel_comparison.csv                  │
+└──────────────────────────────────────────────────────────┘
+                            ↓
+Phase 2: Matrix + Tone Curve Training
+┌──────────────────────────────────────────────────────────┐
+│ matrix_tone_correction                                   │
+│ ├─ Input: pixel_comparison.csv                           │
+│ ├─ Solves: 3×3 color matrix (SVD least-squares)          │
+│ ├─ Fits: 256-bin tone curve with interpolation           │  
+│ └─ Output: matrix_tone_residual.csv, tone_curve.csv      │
+└──────────────────────────────────────────────────────────┘
+                            ↓
+Phase 3: Residual LUT Building
+┌──────────────────────────────────────────────────────────┐
+│ build_residual_lut                                       │
+│ ├─ Input: matrix_tone_residual.csv                       │
+│ ├─ Creates: 17×17×17 residual grid                       │
+│ ├─ Fills: Empty cells via nearest neighbor               │
+│ └─ Output: residual_lut.cube (138 KB)                    │
+└──────────────────────────────────────────────────────────┘
+                            ↓
+Phase 4: Production Use
+┌──────────────────────────────────────────────────────────┐
+│ apply_pipeline                                           │
+│ ├─ Input: Standard image + tone curve + residual LUT     │
+│ ├─ Stage 1: Apply 3×3 matrix                             │
+│ ├─ Stage 2: Apply tone curve (preserves chroma)          │ 
+│ ├─ Stage 3: Apply residual LUT (trilinear)               │
+│ └─ Output: Classic Chrome image                          │
+└──────────────────────────────────────────────────────────┘
+                            ↓
+Phase 5: Validation (Optional - Development Only)
+┌──────────────────────────────────────────────────────────┐
+│ compare_pipeline                                         │
+│ ├─ Computes: MSE, PSNR, Delta E, per-channel MAE         │
+│ └─ Requires: Ground truth (Classic Chrome images)        │
+├──────────────────────────────────────────────────────────┤
+│ analyze_pipeline_bias                                    │
+│ ├─ Detects: Brightness bias, color shifts                │
+│ └─ Requires: Ground truth (Classic Chrome images)        │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│                    PRODUCTION WORKFLOW                   │
+└──────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────┐
+│ apply_pipeline (only this!)                              │
+│ ├─ Input: Standard image + tone_curve.csv +              │
+│ │         residual_lut.cube + hardcoded matrix           │
+│ └─ Output: Classic Chrome image                          │
+└──────────────────────────────────────────────────────────┘
+
+Pipeline Overview:
+───────────────────────────────────────────────────────────
+Input RGB (Standard)
+    ↓
+[Stage 1] 3×3 Color Matrix ───→ Corrects cross-channel color shifts
+    ↓
+[Stage 2] 1D Tone Curve (256) ─→ Adjusts luminance (preserves chroma)
+    ↓
+[Stage 3] Residual LUT (17³) ──→ Corrects local non-linearities
+    ↓
+Output RGB (Classic Chrome)
 ```
 
 ---
 
 ## Step-by-Step Instructions
 
+### Method 1: Direct 3D LUT Workflow
+
+All binaries in this section are located in `src/bin/first_method/`
+
 ### Prerequisites
 
 **Required Files:**
 - Standard JPEG images (camera's standard color profile)
-- Fujifilm Classic Chrome JPEG images (same scenes, development only)
+- Classic Chrome JPEG images (same scenes, development only)
 - Rust toolchain installed
 - OpenCV 4.x installed
 
@@ -105,7 +200,7 @@ Phase 4: Validation (Optional - Development Only)
 source/
   compare/
     standard/          # Standard images (e.g., 9.JPG)
-    classic-chrome/    # Fujifilm images (e.g., 9.JPG, same filenames)
+    classic-chrome/    # Classic Chrome images (e.g., 9.JPG, same filenames)
 outputs/               # Generated files go here
 ```
 
@@ -279,7 +374,7 @@ cargo run --bin compare_lut
 ```
 
 **What It Does:**
-- Loads LUT output and ground truth (Fujifilm Classic Chrome)
+- Loads LUT output and ground truth (Classic Chrome)
 - Computes quality metrics:
   - **MSE** (Mean Squared Error): Lower is better
   - **PSNR** (Peak Signal-to-Noise Ratio): Higher is better (dB)
@@ -331,7 +426,7 @@ cargo run --bin compare_lut
 **When to Run:**
 - After building LUT to validate quality
 - When testing different calibration values
-- **Requires**: Ground truth Fujifilm images
+- **Requires**: Ground truth Classic Chrome images
 
 **Time:** ~60-90 seconds (LAB conversion is expensive)
 
@@ -405,9 +500,130 @@ cargo run --bin analyze_brightness_bias
 **When to Run:**
 - After building LUT to verify bias correction worked
 - When calibrating with new image sets
-- **Requires**: Ground truth Fujifilm images
+- **Requires**: Ground truth Classic Chrome images
 
 **Time:** ~60-90 seconds
+
+---
+
+### Method 2: Matrix + Tone + Residual Pipeline Workflow
+
+All binaries in this section are located in `src/bin/second_method/`
+
+#### Prerequisites
+
+Same as Method 1, plus training data from `stratified_compare_pixel` must be generated first.
+
+#### Step 1: Train Matrix and Tone Curve
+
+**Command:**
+```bash
+cargo run --bin matrix_tone_correction
+```
+
+**What It Does:**
+- Reads `outputs/pixel_comparison.csv` (103,427 samples from Method 1)
+- **Step 3**: Solves global 3×3 color matrix using SVD least-squares
+- **Step 4**: Applies matrix to all training pixels
+- **Step 5**: Computes luminance using Rec.709 coefficients
+- **Step 6**: Fits 256-bin tone curve with linear interpolation and monotonicity
+- **Step 7**: Applies tone curve with chroma preservation
+
+**Output:**
+- `outputs/second_method/matrix_tone_residual.csv` - All intermediate results and residuals
+- `outputs/second_method/tone_curve.csv` - 256-bin tone curve for production
+
+**Time:** ~3-5 seconds
+
+---
+
+#### Step 2: Build Residual LUT
+
+**Command:**
+```bash
+cargo run --bin build_residual_lut
+```
+
+**What It Does:**
+- Reads `matrix_tone_residual.csv` (contains residuals after matrix+tone)
+- **Step 8**: Accumulates residuals into 17×17×17 grid (~20% coverage)
+- **Step 9**: Fills empty cells via nearest neighbor in 3D Euclidean space
+
+**Output:**
+- `outputs/second_method/residual_lut.cube` - 17³ residual LUT (135 KB)
+
+**Time:** ~1-2 seconds
+
+---
+
+#### Step 3: Apply Pipeline to New Images
+
+**Command:**
+```bash
+cargo run --bin apply_pipeline
+```
+
+**What It Does:**
+- Loads hardcoded color matrix, tone curve, and residual LUT
+- Applies 3-stage pipeline per-pixel:
+  1. **Matrix**: 3×3 multiplication, clamp to [0,1]
+  2. **Tone Curve**: Linear interpolation lookup, chroma preservation
+  3. **Residual LUT**: Trilinear interpolation (8-corner cube)
+
+**Output:**
+- `outputs/second_method/final_clone.jpg` - Classic Chrome simulation
+
+**To Process Different Images:**
+Edit `src/bin/second_method/apply_pipeline.rs` line 40:
+```rust
+let input_path = "source/compare/standard/YOUR_IMAGE.JPG";  // ← Change this
+```
+
+**Time:** ~15 seconds for 39.8 MP image
+
+---
+
+#### Step 4-5: Validation (Optional)
+
+**Commands:**
+```bash
+cargo run --bin compare_pipeline           # Quality metrics (PSNR, ΔE, MAE)
+cargo run --bin analyze_pipeline_bias      # Brightness/color bias analysis
+```
+
+**Time:** ~60-90 seconds each
+
+---
+
+#### Complete Pipeline (One-liner)
+
+```bash
+cargo run --bin matrix_tone_correction && \
+cargo run --bin build_residual_lut && \
+cargo run --bin apply_pipeline && \
+cargo run --bin compare_pipeline
+```
+
+**Total Time:** ~90 seconds (training + build + apply + validation)
+
+---
+
+#### Method 2 Results (9.JPG Test Image)
+
+```
+✅ PSNR:       43.0616 dB (Excellent)
+✅ Avg ΔE:     1.2073 (Perceptible through close observation)
+✅ Median ΔE:  1.1765
+✅ L* Bias:    +0.15% (No significant bias)
+✅ File Size:  138 KB total (tone_curve 3.2 KB + residual_lut 135 KB)
+✅ Status:     Production-ready ✅
+```
+
+**Comparison with Method 1:**
+- Quality: Nearly identical (43.06 dB both methods)
+- Size: **6.9× smaller** (138 KB vs 948 KB)
+- Interpretability: **3 editable stages** vs single black-box LUT
+- Flexibility: Can modify matrix, tone, or residual independently
 
 ---
 
@@ -415,32 +631,39 @@ cargo run --bin analyze_brightness_bias
 
 ### File Structure
 
-All workflow binaries are organized in `src/bin/first_method/`:
-- This is the **first method** using stratified LAB sampling + IDW interpolation
-- Future methods (e.g., neural networks, alternative algorithms) will have separate subdirectories
+All workflow binaries are organized by method:
+- **Method 1** (`src/bin/first_method/`): Direct 3D LUT using stratified LAB sampling + IDW interpolation
+- **Method 2** (`src/bin/second_method/`): Decomposed pipeline using matrix + tone curve + residual LUT
 
-### Core Production Files
+### Method 1: Core Production Files
 
 | File | Location | Purpose | Required For |
 |------|----------|---------|--------------|
-| `stratified_compare_pixel.rs` | `src/bin/first_method/` | Generate training data with stratified LAB sampling | LUT creation |
+| `stratified_compare_pixel.rs` | `src/bin/first_method/` | Generate training data with stratified LAB sampling | LUT creation (shared with Method 2) |
 | `build_lut.rs` | `src/bin/first_method/` | Build 33³ LUT with IDW + bias correction | LUT creation |
 | `apply_lut.rs` | `src/bin/first_method/` | Apply LUT to images with trilinear interpolation | Production use |
 
-### Validation Files (Optional)
+### Method 1: Validation Files (Optional)
 
 | File | Location | Purpose | Required For |
 |------|----------|---------|--------------|
 | `compare_lut.rs` | `src/bin/first_method/` | Compute quality metrics (MSE, PSNR, ΔE) | Development validation |
 | `analyze_brightness_bias.rs` | `src/bin/first_method/` | Detect brightness bias in LAB space | Development validation |
 
-### Legacy Files (Not Used)
+### Method 2: Core Production Files
 
-| File | Status | Reason |
-|------|--------|--------|
-| `correct_lut_bias.rs` | ❌ Deprecated | Correction now integrated in `build_lut.rs` |
-| `build_lut_gaussian.rs` | ❌ Not optimal | Pure IDW performs better |
-| `build_lut_kriging.rs` | ❌ Not optimal | No advantage over IDW, slower |
+| File | Location | Purpose | Required For |
+|------|----------|---------|--------------|
+| `matrix_tone_correction.rs` | `src/bin/second_method/` | Solve matrix + fit tone curve (Steps 3-7) | Pipeline training |
+| `build_residual_lut.rs` | `src/bin/second_method/` | Build 17³ residual LUT (Steps 8-9) | Pipeline training |
+| `apply_pipeline.rs` | `src/bin/second_method/` | Apply 3-stage pipeline (Steps 10-11) | Production use |
+
+### Method 2: Validation Files (Optional)
+
+| File | Location | Purpose | Required For |
+|------|----------|---------|--------------|
+| `compare_pipeline.rs` | `src/bin/second_method/` | Compute quality metrics (MSE, PSNR, ΔE) | Development validation |
+| `analyze_pipeline_bias.rs` | `src/bin/second_method/` | Detect brightness/color bias in LAB space | Development validation |
 
 ---
 
@@ -468,15 +691,27 @@ All workflow binaries are organized in `src/bin/first_method/`:
 
 ### Current Results (8 Training Images)
 
+**Method 1 (Direct 3D LUT):**
 ```
-✅ MSE:       3.24
-✅ PSNR:      43.03 dB (Excellent - nearly identical)
-✅ Avg ΔE:    1.28 (perceptible through close observation)
+✅ MSE:       3.22
+✅ PSNR:      43.06 dB (Excellent - nearly identical)
+✅ Avg ΔE:    1.27 (perceptible through close observation)
 ✅ Median ΔE: 1.27
-✅ L* Bias:   -0.03% (essentially eliminated)
+✅ L* Bias:   -0.00% (essentially eliminated)
+✅ File Size: 948 KB
 ```
 
-**Status**: Production-ready, professional-grade quality ✅
+**Method 2 (Matrix + Tone + Residual):**
+```
+✅ MSE:       3.21
+✅ PSNR:      43.06 dB (Excellent - nearly identical)
+✅ Avg ΔE:    1.21 (perceptible through close observation)
+✅ Median ΔE: 1.18
+✅ L* Bias:   +0.15% (no significant bias)
+✅ File Size: 138 KB (6.9× smaller)
+```
+
+**Both Methods Status**: Production-ready, professional-grade quality ✅
 
 ---
 
@@ -484,7 +719,7 @@ All workflow binaries are organized in `src/bin/first_method/`:
 
 ### For End Users (Without Ground Truth)
 
-If you're distributing the LUT to users who don't have Fujifilm cameras:
+If you're distributing the LUT to users who don't have cameras that produce Classic Chrome:
 
 **What They Need:**
 1. `lut_33.cube` file
@@ -784,10 +1019,10 @@ index,sr,sg,sb,cr,cg,cb,dr,dg,db
 
 ## Quick Reference
 
-### Essential Commands
+### Method 1: Essential Commands
 
 ```bash
-# 1. Generate training data (one-time)
+# 1. Generate training data (one-time, shared with Method 2)
 cargo run --bin stratified_compare_pixel
 
 # 2. Build LUT (when updating)
@@ -801,24 +1036,68 @@ cargo run --bin compare_lut
 cargo run --bin analyze_brightness_bias
 ```
 
+### Method 2: Essential Commands
+
+```bash
+# 1. Generate training data (one-time, shared with Method 1)
+cargo run --bin stratified_compare_pixel
+
+# 2. Train matrix and tone curve
+cargo run --bin matrix_tone_correction
+
+# 3. Build residual LUT
+cargo run --bin build_residual_lut
+
+# 4. Apply pipeline (regular use)
+cargo run --bin apply_pipeline
+
+# 5. Validate quality (optional)
+cargo run --bin compare_pipeline
+cargo run --bin analyze_pipeline_bias
+
+# Or run complete pipeline:
+cargo run --bin matrix_tone_correction && \
+cargo run --bin build_residual_lut && \
+cargo run --bin apply_pipeline
+```
+
 ### File Summary
 
-**Core Files** (`src/bin/first_method/`):
-- ✅ `stratified_compare_pixel.rs` - Training data generation
-- ✅ `build_lut.rs` - LUT creation with bias correction
+**Method 1 Core Files** (`src/bin/first_method/`):
+- ✅ `stratified_compare_pixel.rs` - Training data generation (shared)
+- ✅ `build_lut.rs` - LUT creation with IDW + bias correction
 - ✅ `apply_lut.rs` - Production use (apply LUT to images)
-
-**Validation Files** (`src/bin/first_method/`):
 - 🔍 `compare_lut.rs` - Quality metrics (PSNR, ΔE, MSE)
 - 🔍 `analyze_brightness_bias.rs` - Bias detection in LAB space
 
+**Method 2 Core Files** (`src/bin/second_method/`):
+- ✅ `matrix_tone_correction.rs` - Solve matrix + fit tone curve
+- ✅ `build_residual_lut.rs` - Build 17³ residual LUT
+- ✅ `apply_pipeline.rs` - Production use (apply 3-stage pipeline)
+- 🔍 `compare_pipeline.rs` - Quality metrics  (PSNR, ΔE, MSE)
+- 🔍 `analyze_pipeline_bias.rs` - Bias detection in LAB space
+
 **Output Files:**
-- `outputs/pixel_comparison.csv` - Training samples
-- `outputs/lut_33.cube` - Production LUT
-- `outputs/lut_33.jpg` - Test output
+- `outputs/pixel_comparison.csv` - Training samples (shared)
+- `outputs/first_method/lut_33.cube` - Method 1: Production LUT (948 KB)
+- `outputs/first_method/lut_33.jpg` - Method 1: Test output
+- `outputs/second_method/tone_curve.csv` - Method 2: Tone curve (3.2 KB)
+- `outputs/second_method/residual_lut.cube` - Method 2: Residual LUT (135 KB)
+- `outputs/second_method/final_clone.jpg` - Method 2: Test output
+
+### Method Comparison
+
+| Aspect | Method 1 (Direct LUT) | Method 2 (Pipeline) |
+|--------|----------------------|---------------------|
+| **Quality** | PSNR 43.06 dB, ΔE 1.27 | PSNR 43.06 dB, ΔE 1.21 ✅ |
+| **File Size** | 948 KB | 138 KB (6.9× smaller) ✅ |
+| **Complexity** | Single stage ✅ | 3 stages |
+| **Compatibility** | Industry standard .cube ✅ | Custom pipeline |
+| **Interpretability** | Black box | 3 editable components ✅ |
+| **Use Case** | Color grading software | Custom implementations |
 
 ---
 
-**Last Updated**: March 29, 2026  
-**Version**: 1.0  
-**Status**: Production-ready with 8 training images ✅
+**Last Updated**: March 30, 2026  
+**Version**: 2.0 (Added Method 2: Matrix + Tone + Residual Pipeline)  
+**Status**: Both methods production-ready with 8 training images ✅
