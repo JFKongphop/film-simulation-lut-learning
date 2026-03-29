@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.102"
 csv = "1.4.0"
+nalgebra = "0.33"
 opencv = "0.98.1"
 rand = "0.10.0"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -30,3 +31,24 @@ path = "src/bin/first_method/compare_lut.rs"
 [[bin]]
 name = "analyze_brightness_bias"
 path = "src/bin/first_method/analyze_brightness_bias.rs"
+
+# Second Method Workflow Binaries
+[[bin]]
+name = "matrix_tone_correction"
+path = "src/bin/second_method/matrix_tone_correction.rs"
+
+[[bin]]
+name = "build_residual_lut"
+path = "src/bin/second_method/build_residual_lut.rs"
+
+[[bin]]
+name = "apply_pipeline"
+path = "src/bin/second_method/apply_pipeline.rs"
+
+[[bin]]
+name = "compare_pipeline"
+path = "src/bin/second_method/compare_pipeline.rs"
+
+[[bin]]
+name = "analyze_pipeline_bias"
+path = "src/bin/second_method/analyze_pipeline_bias.rs"
