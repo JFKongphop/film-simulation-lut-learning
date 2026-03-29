@@ -157,7 +157,7 @@ fn main() -> Result<()> {
   // Paths
   let input_path = "source/compare/standard/9.JPG";
   let ground_truth_path = "source/compare/classic-chrome/9.JPG";
-  let lut_output_path = "outputs/lut_33.jpg";
+  let lut_output_path = "outputs/first_method/lut_33.jpg";
 
   // Load images
   println!("\n📷 Loading images...");
