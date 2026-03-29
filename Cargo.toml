@@ -4,4 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1.0.102"
+csv = "1.4.0"
 opencv = "0.98.1"
+rand = "0.10.0"
+serde = { version = "1.0.228", features = ["derive"] }
