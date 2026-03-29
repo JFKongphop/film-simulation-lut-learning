@@ -180,9 +180,9 @@ fn main() -> Result<()> {
   println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   // Paths
-  let lut_path = "outputs/lut_33.cube";
+  let lut_path = "outputs/first_method/lut_33.cube";
   let input_path = "source/compare/standard/9.JPG";
-  let output_path = "outputs/lut_33.jpg";
+  let output_path = "outputs/first_method/lut_33.jpg";
 
   // Step 1: Load LUT
   println!("📖 Loading LUT from: {}", lut_path);

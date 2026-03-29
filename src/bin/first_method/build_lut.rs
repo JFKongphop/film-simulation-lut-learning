@@ -33,7 +33,7 @@ fn main() -> Result<()> {
 
   // Step 2: Read CSV and accumulate values
   println!("📖 Reading CSV file...");
-  let file = File::open("outputs/pixel_comparison.csv")?;
+  let file = File::open("outputs/first_method/pixel_comparison.csv")?;
   let mut rdr = ReaderBuilder::new().has_headers(true).from_reader(file);
 
   let mut row_count = 0;
@@ -234,10 +234,10 @@ fn main() -> Result<()> {
 
   // Save LUT to file
   println!("\n💾 Writing corrected LUT to file...");
-  let output_file = File::create("outputs/lut_33.cube")?;
+  let output_file = File::create("outputs/first_method/lut_33.cube")?;
   write_cube_file(output_file, &lut)?;
 
-  println!("✅ Corrected LUT saved to: outputs/lut_33.cube");
+  println!("✅ Corrected LUT saved to: outputs/first_method/lut_33.cube");
 
   // Show some sample LUT values
   println!("\n🔍 Sample LUT values:");
