@@ -1,6 +1,6 @@
 use anyhow::Result;
 use opencv::prelude::*;
-use opencv::{imgcodecs, core};
+use opencv::{core, imgcodecs};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -40,7 +40,10 @@ impl Lut3D {
       }
 
       // Skip TITLE and other metadata
-      if line.starts_with("TITLE") || line.starts_with("DOMAIN_MIN") || line.starts_with("DOMAIN_MAX") {
+      if line.starts_with("TITLE")
+        || line.starts_with("DOMAIN_MIN")
+        || line.starts_with("DOMAIN_MAX")
+      {
         continue;
       }
 
@@ -146,7 +149,7 @@ impl Lut3D {
       for x in 0..cols {
         // Get BGR pixel
         let pixel = input.at_2d::<core::Vec3b>(y, x)?;
-        
+
         // Convert to [0, 1] range (note: OpenCV uses BGR order)
         let b = pixel[0] as f32 / 255.0;
         let g = pixel[1] as f32 / 255.0;
@@ -189,13 +192,22 @@ fn main() -> Result<()> {
   // Show sample LUT values
   println!("\n🔍 Sample LUT values:");
   let black_out = lut.apply(0.0, 0.0, 0.0);
-  println!("   Black [0,0,0] -> [{:.4}, {:.4}, {:.4}]", black_out[0], black_out[1], black_out[2]);
-  
+  println!(
+    "   Black [0,0,0] -> [{:.4}, {:.4}, {:.4}]",
+    black_out[0], black_out[1], black_out[2]
+  );
+
   let white_out = lut.apply(1.0, 1.0, 1.0);
-  println!("   White [1,1,1] -> [{:.4}, {:.4}, {:.4}]", white_out[0], white_out[1], white_out[2]);
-  
+  println!(
+    "   White [1,1,1] -> [{:.4}, {:.4}, {:.4}]",
+    white_out[0], white_out[1], white_out[2]
+  );
+
   let mid_out = lut.apply(0.5, 0.5, 0.5);
-  println!("   Mid [0.5,0.5,0.5] -> [{:.4}, {:.4}, {:.4}]", mid_out[0], mid_out[1], mid_out[2]);
+  println!(
+    "   Mid [0.5,0.5,0.5] -> [{:.4}, {:.4}, {:.4}]",
+    mid_out[0], mid_out[1], mid_out[2]
+  );
 
   // Step 2: Load input image
   println!("\n📷 Loading input image: {}", input_path);

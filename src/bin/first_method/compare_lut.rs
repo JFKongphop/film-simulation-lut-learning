@@ -52,9 +52,21 @@ fn compute_delta_e(img1: &Mat, img2: &Mat) -> Result<(f32, f32, f32)> {
   // Convert both images to LAB color space
   let mut lab1 = Mat::default();
   let mut lab2 = Mat::default();
-  
-  imgproc::cvt_color(img1, &mut lab1, imgproc::COLOR_BGR2Lab, 0, core::AlgorithmHint::ALGO_HINT_DEFAULT)?;
-  imgproc::cvt_color(img2, &mut lab2, imgproc::COLOR_BGR2Lab, 0, core::AlgorithmHint::ALGO_HINT_DEFAULT)?;
+
+  imgproc::cvt_color(
+    img1,
+    &mut lab1,
+    imgproc::COLOR_BGR2Lab,
+    0,
+    core::AlgorithmHint::ALGO_HINT_DEFAULT,
+  )?;
+  imgproc::cvt_color(
+    img2,
+    &mut lab2,
+    imgproc::COLOR_BGR2Lab,
+    0,
+    core::AlgorithmHint::ALGO_HINT_DEFAULT,
+  )?;
 
   let mut sum_delta_e = 0.0f32;
   let mut max_delta_e = 0.0f32;
@@ -82,7 +94,7 @@ fn compute_delta_e(img1: &Mat, img2: &Mat) -> Result<(f32, f32, f32)> {
   }
 
   let avg_delta_e = sum_delta_e / pixel_count as f32;
-  
+
   // Also compute median by collecting all values
   let mut delta_e_values = Vec::new();
   for y in 0..rows {
@@ -153,7 +165,11 @@ fn main() -> Result<()> {
   println!("   Input (standard): {}x{}", input.cols(), input.rows());
 
   let ground_truth = imgcodecs::imread(ground_truth_path, imgcodecs::IMREAD_COLOR)?;
-  println!("   Ground truth (classic-chrome): {}x{}", ground_truth.cols(), ground_truth.rows());
+  println!(
+    "   Ground truth (classic-chrome): {}x{}",
+    ground_truth.cols(),
+    ground_truth.rows()
+  );
 
   let lut_output = imgcodecs::imread(lut_output_path, imgcodecs::IMREAD_COLOR)?;
   println!("   LUT output: {}x{}", lut_output.cols(), lut_output.rows());
@@ -180,7 +196,7 @@ fn main() -> Result<()> {
   println!("\n📡 Computing Peak Signal-to-Noise Ratio (PSNR)...");
   let psnr = compute_psnr(mse);
   println!("   PSNR: {:.4} dB", psnr);
-  
+
   // PSNR interpretation
   if psnr >= 40.0 {
     println!("   Quality: Excellent (nearly identical)");
@@ -198,7 +214,7 @@ fn main() -> Result<()> {
   println!("   Average ΔE: {:.4}", avg_de);
   println!("   Median ΔE:  {:.4}", median_de);
   println!("   Max ΔE:     {:.4}", max_de);
-  
+
   // Delta E interpretation (CIE76 standard)
   println!("\n   Interpretation:");
   if avg_de < 1.0 {
