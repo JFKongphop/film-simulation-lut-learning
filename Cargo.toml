@@ -9,3 +9,24 @@ csv = "1.4.0"
 opencv = "0.98.1"
 rand = "0.10.0"
 serde = { version = "1.0.228", features = ["derive"] }
+
+# First Method Workflow Binaries
+[[bin]]
+name = "stratified_compare_pixel"
+path = "src/bin/first_method/stratified_compare_pixel.rs"
+
+[[bin]]
+name = "build_lut"
+path = "src/bin/first_method/build_lut.rs"
+
+[[bin]]
+name = "apply_lut"
+path = "src/bin/first_method/apply_lut.rs"
+
+[[bin]]
+name = "compare_lut"
+path = "src/bin/first_method/compare_lut.rs"
+
+[[bin]]
+name = "analyze_brightness_bias"
+path = "src/bin/first_method/analyze_brightness_bias.rs"
