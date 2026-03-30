@@ -34,7 +34,11 @@ fn main() -> Result<()> {
   // Load residual LUT
   println!("Loading residual LUT from outputs/second_method/residual_lut.cube...");
   let residual_lut = load_cube_lut("outputs/second_method/residual_lut.cube")?;
-  println!("Loaded LUT with {} entries ({}^3)", residual_lut.len(), LUT_SIZE);
+  println!(
+    "Loaded LUT with {} entries ({}^3)",
+    residual_lut.len(),
+    LUT_SIZE
+  );
 
   // Load input image
   println!("\nLoading input image from source/compare/standard/9.JPG...");
@@ -67,7 +71,11 @@ fn main() -> Result<()> {
 
   // Save output
   println!("Saving output to outputs/second_method/final_clone.jpg...");
-  imgcodecs::imwrite("outputs/second_method/final_clone.jpg", &output_img, &core::Vector::new())?;
+  imgcodecs::imwrite(
+    "outputs/second_method/final_clone.jpg",
+    &output_img,
+    &core::Vector::new(),
+  )?;
 
   println!("\n=== Complete ===");
   println!("Output saved to outputs/second_method/final_clone.jpg");
@@ -120,11 +128,7 @@ fn load_cube_lut(path: &str) -> Result<Vec<[f32; 3]>> {
   Ok(lut)
 }
 
-fn process_image(
-  input: &Mat,
-  tone_curve: &[f32],
-  residual_lut: &[[f32; 3]],
-) -> Result<Mat> {
+fn process_image(input: &Mat, tone_curve: &[f32], residual_lut: &[[f32; 3]]) -> Result<Mat> {
   let rows = input.rows();
   let cols = input.cols();
   let mut output = input.clone();
@@ -133,7 +137,7 @@ fn process_image(
     for x in 0..cols {
       // Get BGR pixel (OpenCV uses BGR order)
       let pixel = input.at_2d::<core::Vec3b>(y, x)?;
-      
+
       // Convert to [0, 1] range and RGB order
       let rgb_f32 = [
         pixel[2] as f32 / 255.0, // R (from BGR[2])
@@ -155,11 +159,7 @@ fn process_image(
   Ok(output)
 }
 
-fn apply_pipeline(
-  rgb: [f32; 3],
-  tone_curve: &[f32],
-  residual_lut: &[[f32; 3]],
-) -> [f32; 3] {
+fn apply_pipeline(rgb: [f32; 3], tone_curve: &[f32], residual_lut: &[[f32; 3]]) -> [f32; 3] {
   // Step 1: Apply color matrix
   let matrix_rgb = apply_matrix(&COLOR_MATRIX, rgb);
 

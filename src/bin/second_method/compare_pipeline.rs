@@ -179,8 +179,7 @@ fn main() -> Result<()> {
   );
 
   // Verify dimensions match
-  if ground_truth.rows() != pipeline_output.rows()
-    || ground_truth.cols() != pipeline_output.cols()
+  if ground_truth.rows() != pipeline_output.rows() || ground_truth.cols() != pipeline_output.cols()
   {
     anyhow::bail!(
       "Image dimensions don't match! Ground truth: {}x{}, Pipeline output: {}x{}",
