@@ -83,15 +83,20 @@ fn main() -> Result<()> {
   let error_map_m1 = create_jet_colormap(&delta_e_m1, 0.0, 5.0)?;
   let error_map_m2 = create_jet_colormap(&delta_e_m2, 0.0, 5.0)?;
 
+  // PNG compression: 0 (no compression) to 9 (max compression)
+  let mut png_params = core::Vector::new();
+  png_params.push(imgcodecs::IMWRITE_PNG_COMPRESSION);
+  png_params.push(9); // Maximum compression
+
   imgcodecs::imwrite(
     "outputs/error/error_map_method1_jet.png",
     &error_map_m1,
-    &core::Vector::new(),
+    &png_params,
   )?;
   imgcodecs::imwrite(
     "outputs/error/error_map_method2_jet.png",
     &error_map_m2,
-    &core::Vector::new(),
+    &png_params,
   )?;
   println!("✓ Saved: outputs/error/error_map_method1_jet.png");
   println!("✓ Saved: outputs/error/error_map_method2_jet.png");
@@ -120,12 +125,12 @@ fn main() -> Result<()> {
   imgcodecs::imwrite(
     "outputs/error/error_map_method1_custom.png",
     &custom_m1,
-    &core::Vector::new(),
+    &png_params,
   )?;
   imgcodecs::imwrite(
     "outputs/error/error_map_method2_custom.png",
     &custom_m2,
-    &core::Vector::new(),
+    &png_params,
   )?;
   println!("✓ Saved: outputs/error/error_map_method1_custom.png");
   println!("✓ Saved: outputs/error/error_map_method2_custom.png");
@@ -138,12 +143,12 @@ fn main() -> Result<()> {
   imgcodecs::imwrite(
     "outputs/error/amplified_diff_method1.png",
     &amp_m1,
-    &core::Vector::new(),
+    &png_params,
   )?;
   imgcodecs::imwrite(
     "outputs/error/amplified_diff_method2.png",
     &amp_m2,
-    &core::Vector::new(),
+    &png_params,
   )?;
   println!("✓ Saved: outputs/error/amplified_diff_method1.png");
   println!("✓ Saved: outputs/error/amplified_diff_method2.png");
