@@ -2,3 +2,4 @@
 source
 .DS_Store
 METHOD.md
+outputs/error/*

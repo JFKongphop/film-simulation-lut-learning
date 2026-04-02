@@ -49,6 +49,11 @@ path = "src/bin/second_method/apply_pipeline.rs"
 name = "compare_pipeline"
 path = "src/bin/second_method/compare_pipeline.rs"
 
+# Visualization Tools
+[[bin]]
+name = "generate_error_maps"
+path = "src/bin/error/generate_error_maps.rs"
+
 [[bin]]
 name = "analyze_pipeline_bias"
 path = "src/bin/second_method/analyze_pipeline_bias.rs"
