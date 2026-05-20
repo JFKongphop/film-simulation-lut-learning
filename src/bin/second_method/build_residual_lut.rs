@@ -121,7 +121,7 @@ fn main() -> Result<()> {
 
   // Fill empty cells using nearest neighbor
   println!("Filling empty cells using nearest neighbor...");
-  fill_empty_cells(&mut lut, &count);
+  fill_empty_cells_nn(&mut lut, &count);
 
   // Save as .cube file
   println!("\nSaving to outputs/second_method/residual_lut.cube...");
@@ -151,7 +151,7 @@ fn get_lut_coords(idx: usize) -> (usize, usize, usize) {
   (r, g, b)
 }
 
-fn fill_empty_cells(lut: &mut [[f32; 3]], count: &[Vec<Vec<u32>>]) {
+fn fill_empty_cells_nn(lut: &mut [[f32; 3]], count: &[Vec<Vec<u32>>]) {
   let mut filled_count = 0;
 
   for idx in 0..LUT_TOTAL {
