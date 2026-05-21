@@ -41,6 +41,31 @@ path = "src/bin/second_method/matrix_tone_correction.rs"
 name = "build_residual_lut"
 path = "src/bin/second_method/build_residual_lut.rs"
 
+# Second Method: Alternative Interpolation Methods
+[[bin]]
+name = "build_residual_lut_trilinear"
+path = "src/bin/second_method/build_residual_lut_trilinear.rs"
+
+[[bin]]
+name = "build_residual_lut_idw"
+path = "src/bin/second_method/build_residual_lut_idw.rs"
+
+[[bin]]
+name = "build_residual_lut_knn"
+path = "src/bin/second_method/build_residual_lut_knn.rs"
+
+[[bin]]
+name = "build_residual_lut_rbf"
+path = "src/bin/second_method/build_residual_lut_rbf.rs"
+
+[[bin]]
+name = "build_residual_lut_gpr"
+path = "src/bin/second_method/build_residual_lut_gpr.rs"
+
+[[bin]]
+name = "build_residual_lut_kriging"
+path = "src/bin/second_method/build_residual_lut_kriging.rs"
+
 [[bin]]
 name = "apply_pipeline"
 path = "src/bin/second_method/apply_pipeline.rs"
