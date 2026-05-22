@@ -7,6 +7,7 @@ use rand::seq::SliceRandom;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::File;
+use std::time::Instant;
 
 #[derive(Serialize)]
 struct PixelData {
@@ -67,13 +68,15 @@ fn compute_bucket(l: f32, a: f32, b: f32) -> (usize, usize, usize) {
 }
 
 fn main() -> Result<()> {
+  let start = Instant::now();
+
   // Use fixed seed for reproducibility
   let mut rng = StdRng::seed_from_u64(42);
 
   let mut all_pixel_data: Vec<PixelData> = Vec::new();
 
-  // Process all image pairs (1.JPG through 8.JPG)
-  for img_num in 1..=8 {
+  // Process all image pairs (1.JPG through 90.JPG)
+  for img_num in 1..=90 {
     let filename = format!("{}.JPG", img_num);
     let standard_path = format!("source/compare/standard/{}", filename);
     let chrome_path = format!("source/compare/classic-chrome/{}", filename);
@@ -228,6 +231,9 @@ fn main() -> Result<()> {
   println!("\n💡 Stratified LAB sampling complete!");
   println!("   Better coverage of rare colors");
   println!("   Reduced redundancy from flat regions");
+
+  let elapsed = start.elapsed();
+  println!("\n⏱️  Total execution time: {:.2} seconds", elapsed.as_secs_f64());
 
   Ok(())
 }
