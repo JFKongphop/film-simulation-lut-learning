@@ -3,3 +3,8 @@ source
 .DS_Store
 METHOD.md
 outputs/error/*
+
+# Large CSV files (>100MB)
+outputs/pixel_comparison.csv
+outputs/first_method/pixel_comparison.csv
+outputs/second_method/matrix_tone_residual.csv
