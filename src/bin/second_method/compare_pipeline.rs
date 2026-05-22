@@ -151,115 +151,130 @@ fn compute_channel_stats(img1: &Mat, img2: &Mat) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-  println!("📊 Comparing All Interpolation Methods with Ground Truth");
+  println!("📊 Comparing All Interpolation Methods with Ground Truth (4 Test Images)");
   println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   // Define all methods to compare
   let methods = vec![
-    ("NN", "final_clone.jpg"),                     // Original baseline
-    ("Trilinear", "final_clone_trilinear.jpg"),
-    ("IDW", "final_clone_idw.jpg"),
-    ("KNN", "final_clone_knn.jpg"),
-    ("RBF", "final_clone_rbf.jpg"),
-    ("GPR", "final_clone_gpr.jpg"),
-    ("Kriging", "final_clone_kriging.jpg"),
+    "nn",
+    "trilinear",
+    "idw",
+    "knn",
+    "rbf",
+    "gpr",
+    "kriging",
   ];
 
-  // Paths
-  let ground_truth_path = "source/compare/classic-chrome/10.JPG";
+  // Test images
+  let test_images = vec![91, 92, 93, 94];
 
-  // Load ground truth once
-  println!("\n📷 Loading ground truth...");
-  let ground_truth = imgcodecs::imread(ground_truth_path, imgcodecs::IMREAD_COLOR)?;
-  println!(
-    "   Ground truth (classic-chrome): {}x{}",
-    ground_truth.cols(),
-    ground_truth.rows()
-  );
+  // Store results for each image and method
+  use std::collections::HashMap;
+  let mut all_results: HashMap<(u32, String), (f64, f64, f32, f32, f32)> = HashMap::new();
 
-  // Store results for summary table
-  let mut results = Vec::new();
+  // Process each test image
+  println!("\n🔄 Processing images...\n");
+  for img_num in &test_images {
+    println!("\n╔═══════════════════════════════════════════════════════════════════════════╗");
+    println!("║                     📸 Test Image: {}.JPG                                  ║", img_num);
+    println!("╚═══════════════════════════════════════════════════════════════════════════╝");
 
-  // Evaluate each method
-  for (method_name, output_file) in &methods {
-    println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    println!("📐 Method: {}", method_name.to_uppercase());
-    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    // Load ground truth
+    let ground_truth_path = format!("source/compare/classic-chrome/{}.JPG", img_num);
+    let ground_truth = imgcodecs::imread(&ground_truth_path, imgcodecs::IMREAD_COLOR)?;
+    println!("   Ground truth: {}x{}", ground_truth.cols(), ground_truth.rows());
 
-    // Load pipeline output
-    let output_path = format!("outputs/second_method/{}", output_file);
-    let pipeline_output = imgcodecs::imread(&output_path, imgcodecs::IMREAD_COLOR)?;
-    println!("   Loaded: {}", output_file);
-    println!(
-      "   Size: {}x{}",
-      pipeline_output.cols(),
-      pipeline_output.rows()
-    );
+    println!("\n┌────────────┬──────────┬───────────┬──────────┬──────────┬──────────┐");
+    println!("│ Method     │   MSE    │ PSNR (dB) │ Avg ΔE   │ Med ΔE   │ Max ΔE   │");
+    println!("├────────────┼──────────┼───────────┼──────────┼──────────┼──────────┤");
 
-    // Verify dimensions match
-    if ground_truth.rows() != pipeline_output.rows()
-      || ground_truth.cols() != pipeline_output.cols()
-    {
-      anyhow::bail!(
-        "Image dimensions don't match for {}! Ground truth: {}x{}, Pipeline output: {}x{}",
-        method_name,
-        ground_truth.cols(),
-        ground_truth.rows(),
-        pipeline_output.cols(),
-        pipeline_output.rows()
+    // Evaluate each method
+    for method_name in &methods {
+      // Load pipeline output
+      let output_path = format!("outputs/second_method/final_clone_{}_{}.jpg", img_num, method_name);
+      let pipeline_output = imgcodecs::imread(&output_path, imgcodecs::IMREAD_COLOR)?;
+
+      // Compute metrics
+      let mse = compute_mse(&ground_truth, &pipeline_output)?;
+      let psnr = compute_psnr(mse);
+      let (avg_de, max_de, median_de) = compute_delta_e(&ground_truth, &pipeline_output)?;
+
+      println!(
+        "│ {:10} │ {:8.4} │ {:9.4} │ {:8.4} │ {:8.4} │ {:8.2} │",
+        method_name.to_uppercase(), mse, psnr, avg_de, median_de, max_de
       );
+
+      // Store results
+      all_results.insert((*img_num, method_name.to_string()), (mse, psnr, avg_de, median_de, max_de));
     }
-
-    // Compute MSE
-    println!("\n🔢 Computing metrics...");
-    let mse = compute_mse(&ground_truth, &pipeline_output)?;
-    let psnr = compute_psnr(mse);
-    let (avg_de, max_de, median_de) = compute_delta_e(&ground_truth, &pipeline_output)?;
-
-    println!("   MSE:        {:.6}", mse);
-    println!("   PSNR:       {:.4} dB", psnr);
-    println!("   Avg ΔE:     {:.4}", avg_de);
-    println!("   Median ΔE:  {:.4}", median_de);
-    println!("   Max ΔE:     {:.4}", max_de);
-
-    // Store results
-    results.push((method_name.to_string(), mse, psnr, avg_de, median_de, max_de));
+    println!("└────────────┴──────────┴───────────┴──────────┴──────────┴──────────┘");
   }
 
-  // Print summary table
+  // Compute averages across all images
+  let mut method_averages: Vec<(String, f64, f64, f32, f32, f32)> = Vec::new();
+  
+  for method_name in &methods {
+    let mut sum_mse = 0.0;
+    let mut sum_psnr = 0.0;
+    let mut sum_avg_de = 0.0;
+    let mut sum_median_de = 0.0;
+    let mut sum_max_de = 0.0;
+
+    for img_num in &test_images {
+      let (mse, psnr, avg_de, median_de, max_de) = all_results.get(&(*img_num, method_name.to_string())).unwrap();
+      sum_mse += mse;
+      sum_psnr += psnr;
+      sum_avg_de += avg_de;
+      sum_median_de += median_de;
+      sum_max_de += max_de;
+    }
+
+    let num_images = test_images.len() as f64;
+    method_averages.push((
+      method_name.to_string(),
+      sum_mse / num_images,
+      sum_psnr / num_images,
+      sum_avg_de / num_images as f32,
+      sum_median_de / num_images as f32,
+      sum_max_de / num_images as f32,
+    ));
+  }
+
+  // Sort by PSNR (descending)
+  method_averages.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap());
+
+  // Print average summary table
   println!("\n\n");
   println!("╔═══════════════════════════════════════════════════════════════════════════╗");
-  println!("║                         📊 RESULTS SUMMARY                                ║");
+  println!("║                   📊 AVERAGE RESULTS (4 Test Images)                      ║");
   println!("╚═══════════════════════════════════════════════════════════════════════════╝");
   println!();
   println!("┌────────────┬──────────┬───────────┬──────────┬──────────┬──────────┐");
   println!("│ Method     │   MSE    │ PSNR (dB) │ Avg ΔE   │ Med ΔE   │ Max ΔE   │");
   println!("├────────────┼──────────┼───────────┼──────────┼──────────┼──────────┤");
 
-  for (method, mse, psnr, avg_de, median_de, max_de) in &results {
+  for (method, mse, psnr, avg_de, median_de, max_de) in &method_averages {
     println!(
       "│ {:10} │ {:8.4} │ {:9.4} │ {:8.4} │ {:8.4} │ {:8.2} │",
-      method, mse, psnr, avg_de, median_de, max_de
+      method.to_uppercase(), mse, psnr, avg_de, median_de, max_de
     );
   }
 
   println!("└────────────┴──────────┴───────────┴──────────┴──────────┴──────────┘");
 
   // Find best methods
-  println!("\n🏆 Best Methods:");
-  let best_psnr = results
-    .iter()
-    .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap())
-    .unwrap();
-  println!("   Highest PSNR:  {} ({:.4} dB)", best_psnr.0, best_psnr.2);
+  println!("\n🏆 Best Methods (Average):");
+  let best_psnr = &method_averages[0];
+  println!("   Highest PSNR:  {} ({:.4} dB)", best_psnr.0.to_uppercase(), best_psnr.2);
 
-  let best_de = results
+  let best_de = method_averages
     .iter()
     .min_by(|a, b| a.3.partial_cmp(&b.3).unwrap())
     .unwrap();
-  println!("   Lowest Avg ΔE: {} ({:.4})", best_de.0, best_de.3);
+  println!("   Lowest Avg ΔE: {} ({:.4})", best_de.0.to_uppercase(), best_de.3);
 
   println!("\n🎉 Comparison complete!");
+  println!("   Evaluated {} methods on {} test images", methods.len(), test_images.len());
 
   Ok(())
 }

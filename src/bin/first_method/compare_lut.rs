@@ -151,94 +151,92 @@ fn compute_channel_stats(img1: &Mat, img2: &Mat) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-  println!("📊 Comparing LUT Output with Ground Truth");
-  println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  println!("📊 Comparing First Method (33³ LUT) with Ground Truth (4 Test Images)");
+  println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-  // Paths
-  let input_path = "source/compare/standard/9.JPG";
-  let ground_truth_path = "source/compare/classic-chrome/9.JPG";
-  let lut_output_path = "outputs/first_method/lut_33.jpg";
+  // Test images
+  let test_images = vec![91, 92, 93, 94];
 
-  // Load images
-  println!("\n📷 Loading images...");
-  let input = imgcodecs::imread(input_path, imgcodecs::IMREAD_COLOR)?;
-  println!("   Input (standard): {}x{}", input.cols(), input.rows());
+  // Store results for each image
+  use std::collections::HashMap;
+  let mut all_results: HashMap<u32, (f64, f64, f32, f32, f32)> = HashMap::new();
 
-  let ground_truth = imgcodecs::imread(ground_truth_path, imgcodecs::IMREAD_COLOR)?;
-  println!(
-    "   Ground truth (classic-chrome): {}x{}",
-    ground_truth.cols(),
-    ground_truth.rows()
-  );
+  println!("\n🔄 Processing images...\n");
 
-  let lut_output = imgcodecs::imread(lut_output_path, imgcodecs::IMREAD_COLOR)?;
-  println!("   LUT output: {}x{}", lut_output.cols(), lut_output.rows());
+  // Process each test image
+  for img_num in &test_images {
+    println!("\n╔═══════════════════════════════════════════════════════════════════════════╗");
+    println!("║                     📸 Test Image: {}.JPG                                  ║", img_num);
+    println!("╚═══════════════════════════════════════════════════════════════════════════╝");
 
-  // Verify dimensions match
-  if ground_truth.rows() != lut_output.rows() || ground_truth.cols() != lut_output.cols() {
-    anyhow::bail!(
-      "Image dimensions don't match! Ground truth: {}x{}, LUT output: {}x{}",
-      ground_truth.cols(),
-      ground_truth.rows(),
-      lut_output.cols(),
-      lut_output.rows()
+    // Load images
+    let ground_truth_path = format!("source/compare/classic-chrome/{}.JPG", img_num);
+    let lut_output_path = format!("outputs/first_method/lut_33_{}.jpg", img_num);
+
+    let ground_truth = imgcodecs::imread(&ground_truth_path, imgcodecs::IMREAD_COLOR)?;
+    let lut_output = imgcodecs::imread(&lut_output_path, imgcodecs::IMREAD_COLOR)?;
+
+    println!("   Ground truth: {}x{}", ground_truth.cols(), ground_truth.rows());
+    println!("   LUT output: {}x{}", lut_output.cols(), lut_output.rows());
+
+    // Compute metrics
+    let mse = compute_mse(&ground_truth, &lut_output)?;
+    let psnr = compute_psnr(mse);
+    let (avg_de, max_de, median_de) = compute_delta_e(&ground_truth, &lut_output)?;
+
+    println!("\n┌────────────┬──────────┬───────────┬──────────┬──────────┬──────────┐");
+    println!("│ Method     │   MSE    │ PSNR (dB) │ Avg ΔE   │ Med ΔE   │ Max ΔE   │");
+    println!("├────────────┼──────────┼───────────┼──────────┼──────────┼──────────┤");
+    println!(
+      "│ {:10} │ {:8.4} │ {:9.4} │ {:8.4} │ {:8.4} │ {:8.2} │",
+      "LUT 33³", mse, psnr, avg_de, median_de, max_de
     );
+    println!("└────────────┴──────────┴───────────┴──────────┴──────────┴──────────┘");
+
+    // Store results
+    all_results.insert(*img_num, (mse, psnr, avg_de, median_de, max_de));
   }
 
-  println!("\n✅ All images loaded successfully");
+  // Compute averages
+  let num_images = test_images.len() as f64;
+  let mut sum_mse = 0.0;
+  let mut sum_psnr = 0.0;
+  let mut sum_avg_de = 0.0;
+  let mut sum_median_de = 0.0;
+  let mut sum_max_de = 0.0;
 
-  // Compute MSE
-  println!("\n🔢 Computing Mean Squared Error (MSE)...");
-  let mse = compute_mse(&ground_truth, &lut_output)?;
-  println!("   MSE: {:.6}", mse);
-
-  // Compute PSNR
-  println!("\n📡 Computing Peak Signal-to-Noise Ratio (PSNR)...");
-  let psnr = compute_psnr(mse);
-  println!("   PSNR: {:.4} dB", psnr);
-
-  // PSNR interpretation
-  if psnr >= 40.0 {
-    println!("   Quality: Excellent (nearly identical)");
-  } else if psnr >= 30.0 {
-    println!("   Quality: Good (minor differences)");
-  } else if psnr >= 20.0 {
-    println!("   Quality: Fair (noticeable differences)");
-  } else {
-    println!("   Quality: Poor (significant differences)");
+  for img_num in &test_images {
+    let (mse, psnr, avg_de, median_de, max_de) = all_results.get(img_num).unwrap();
+    sum_mse += mse;
+    sum_psnr += psnr;
+    sum_avg_de += avg_de;
+    sum_median_de += median_de;
+    sum_max_de += max_de;
   }
 
-  // Compute Delta E
-  println!("\n🎨 Computing Delta E (color difference)...");
-  let (avg_de, max_de, median_de) = compute_delta_e(&ground_truth, &lut_output)?;
-  println!("   Average ΔE: {:.4}", avg_de);
-  println!("   Median ΔE:  {:.4}", median_de);
-  println!("   Max ΔE:     {:.4}", max_de);
+  let avg_mse = sum_mse / num_images;
+  let avg_psnr = sum_psnr / num_images;
+  let avg_avg_de = sum_avg_de / num_images as f32;
+  let avg_median_de = sum_median_de / num_images as f32;
+  let avg_max_de = sum_max_de / num_images as f32;
 
-  // Delta E interpretation (CIE76 standard)
-  println!("\n   Interpretation:");
-  if avg_de < 1.0 {
-    println!("   ΔE < 1.0: Not perceptible by human eyes");
-  } else if avg_de < 2.0 {
-    println!("   ΔE 1.0-2.0: Perceptible through close observation");
-  } else if avg_de < 3.5 {
-    println!("   ΔE 2.0-3.5: Perceptible at a glance");
-  } else if avg_de < 5.0 {
-    println!("   ΔE 3.5-5.0: Clear difference, still acceptable");
-  } else {
-    println!("   ΔE > 5.0: Obvious difference");
-  }
+  // Print average summary table
+  println!("\n\n");
+  println!("╔═══════════════════════════════════════════════════════════════════════════╗");
+  println!("║           📊 AVERAGE RESULTS - First Method (4 Test Images)              ║");
+  println!("╚═══════════════════════════════════════════════════════════════════════════╝");
+  println!();
+  println!("┌────────────┬──────────┬───────────┬──────────┬──────────┬──────────┐");
+  println!("│ Method     │   MSE    │ PSNR (dB) │ Avg ΔE   │ Med ΔE   │ Max ΔE   │");
+  println!("├────────────┼──────────┼───────────┼──────────┼──────────┼──────────┤");
+  println!(
+    "│ {:10} │ {:8.4} │ {:9.4} │ {:8.4} │ {:8.4} │ {:8.2} │",
+    "LUT 33³", avg_mse, avg_psnr, avg_avg_de, avg_median_de, avg_max_de
+  );
+  println!("└────────────┴──────────┴───────────┴──────────┴──────────┴──────────┘");
 
-  // Per-channel statistics
-  compute_channel_stats(&ground_truth, &lut_output)?;
-
-  println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  println!("📋 Summary:");
-  println!("   MSE:        {:.6}", mse);
-  println!("   PSNR:       {:.4} dB", psnr);
-  println!("   Avg ΔE:     {:.4}", avg_de);
-  println!("   Median ΔE:  {:.4}", median_de);
   println!("\n🎉 Comparison complete!");
+  println!("   First Method (33³ LUT): {:.4} dB PSNR, ΔE {:.4}", avg_psnr, avg_avg_de);
 
   Ok(())
 }

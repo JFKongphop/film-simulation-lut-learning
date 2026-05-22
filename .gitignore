@@ -8,3 +8,6 @@ outputs/error/*
 outputs/pixel_comparison.csv
 outputs/first_method/pixel_comparison.csv
 outputs/second_method/matrix_tone_residual.csv
+
+# Output images (too many, regenerate as needed)
+outputs/second_method/final_clone_*.jpg

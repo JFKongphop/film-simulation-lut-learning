@@ -176,13 +176,11 @@ impl Lut3D {
 }
 
 fn main() -> Result<()> {
-  println!("🎨 Applying 3D LUT to Image");
+  println!("🎨 Applying 3D LUT to Test Images (91-94)");
   println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
   // Paths
   let lut_path = "outputs/first_method/lut_33.cube";
-  let input_path = "source/compare/standard/9.JPG";
-  let output_path = "outputs/first_method/lut_33.jpg";
 
   // Step 1: Load LUT
   println!("📖 Loading LUT from: {}", lut_path);
@@ -209,22 +207,32 @@ fn main() -> Result<()> {
     mid_out[0], mid_out[1], mid_out[2]
   );
 
-  // Step 2: Load input image
-  println!("\n📷 Loading input image: {}", input_path);
-  let input = imgcodecs::imread(input_path, imgcodecs::IMREAD_COLOR)?;
-  println!("✅ Loaded image: {}x{}", input.cols(), input.rows());
+  // Step 2: Process test images 91-94
+  for img_num in 91..=94 {
+    println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("📸 Processing Image {}.JPG", img_num);
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-  // Step 3: Apply LUT
-  println!("\n⚙️  Applying LUT with trilinear interpolation...");
-  let output = lut.apply_to_image(&input)?;
-  println!("✅ LUT applied successfully");
+    let input_path = format!("source/compare/standard/{}.JPG", img_num);
+    let output_path = format!("outputs/first_method/lut_33_{}.jpg", img_num);
 
-  // Step 4: Save output
-  println!("\n💾 Saving output to: {}", output_path);
-  imgcodecs::imwrite(output_path, &output, &core::Vector::new())?;
-  println!("✅ Output saved successfully");
+    // Load input image
+    println!("📷 Loading input image: {}", input_path);
+    let input = imgcodecs::imread(&input_path, imgcodecs::IMREAD_COLOR)?;
+    println!("✅ Loaded image: {}x{}", input.cols(), input.rows());
 
-  println!("\n🎉 Done!");
+    // Apply LUT
+    println!("⚙️  Applying LUT with trilinear interpolation...");
+    let output = lut.apply_to_image(&input)?;
+    println!("✅ LUT applied successfully");
+
+    // Save output
+    println!("💾 Saving output to: {}", output_path);
+    imgcodecs::imwrite(&output_path, &output, &core::Vector::new())?;
+    println!("✅ Saved: {}", output_path);
+  }
+
+  println!("\n🎉 All images processed!");
 
   Ok(())
 }

@@ -5,11 +5,11 @@ use opencv::{core, imgcodecs};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-// Hardcoded color matrix from Step 3
+// Hardcoded color matrix from Step 3 (90-image training)
 const COLOR_MATRIX: [[f32; 3]; 3] = [
-  [0.90185, 0.07293, 0.06049],
-  [0.16300, 0.89943, 0.20890],
-  [-0.06289, 0.04044, 0.73567],
+  [0.90001, 0.06628, 0.05371],
+  [0.15345, 0.90884, 0.22182],
+  [-0.05292, 0.03634, 0.72899],
 ];
 
 // Rec.709 luminance coefficients
@@ -42,11 +42,6 @@ fn main() -> Result<()> {
   let tone_curve = load_tone_curve("outputs/second_method/tone_curve.csv")?;
   println!("Loaded {} tone curve bins", tone_curve.len());
 
-  // Load input image (shared by all methods)
-  println!("Loading input image from source/compare/standard/10.JPG...");
-  let input_img = imgcodecs::imread("source/compare/standard/10.JPG", imgcodecs::IMREAD_COLOR)?;
-  println!("Image size: {}x{}", input_img.cols(), input_img.rows());
-
   // Print pipeline parameters
   println!("\n=== Pipeline Parameters ===");
   println!("Color Matrix:");
@@ -59,30 +54,44 @@ fn main() -> Result<()> {
     println!("  [{}] = {:.6}", i, tone_curve[i]);
   }
 
-  // Process each method
-  println!("\n=== Processing All Methods ===");
-  for (method_name, lut_file, output_file) in &lut_methods {
-    println!("\n--- Method: {} ---", method_name.to_uppercase());
+  // Process test images 91-94
+  for img_num in 91..=94 {
+    println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("📸 Processing Test Image: {}.JPG", img_num);
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-    // Load residual LUT
-    let lut_path = format!("outputs/second_method/{}", lut_file);
-    println!("Loading {}...", lut_path);
-    let residual_lut = load_cube_lut(&lut_path)?;
-    println!("Loaded LUT with {} entries ({}^3)", residual_lut.len(), LUT_SIZE);
+    // Load input image
+    let input_path = format!("source/compare/standard/{}.JPG", img_num);
+    println!("Loading input image from {}...", input_path);
+    let input_img = imgcodecs::imread(&input_path, imgcodecs::IMREAD_COLOR)?;
+    println!("Image size: {}x{}", input_img.cols(), input_img.rows());
 
-    // Process image
-    println!("Processing image...");
-    let output_img = process_image(&input_img, &tone_curve, &residual_lut)?;
+    // Process each method
+    println!("\n=== Processing All Methods ===");
+    for (method_name, lut_file, _) in &lut_methods {
+      println!("\n--- Method: {} ---", method_name.to_uppercase());
 
-    // Save output
-    let output_path = format!("outputs/second_method/{}", output_file);
-    println!("Saving to {}...", output_path);
-    imgcodecs::imwrite(&output_path, &output_img, &core::Vector::new())?;
-    println!("✓ Saved {}", output_path);
+      // Load residual LUT
+      let lut_path = format!("outputs/second_method/{}", lut_file);
+      println!("Loading {}...", lut_path);
+      let residual_lut = load_cube_lut(&lut_path)?;
+      println!("Loaded LUT with {} entries ({}^3)", residual_lut.len(), LUT_SIZE);
+
+      // Process image
+      println!("Processing image...");
+      let output_img = process_image(&input_img, &tone_curve, &residual_lut)?;
+
+      // Save output with image number and method name
+      let output_path = format!("outputs/second_method/final_clone_{}_{}.jpg", img_num, method_name);
+      println!("Saving to {}...", output_path);
+      imgcodecs::imwrite(&output_path, &output_img, &core::Vector::new())?;
+      println!("✓ Saved {}", output_path);
+    }
   }
 
-  println!("\n=== Complete ===");
-  println!("Processed {} interpolation methods", lut_methods.len());
+  println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+  println!("=== Complete ===");
+  println!("Processed 4 test images × {} interpolation methods = {} outputs", lut_methods.len(), 4 * lut_methods.len());
   println!("All outputs saved to outputs/second_method/");
 
   Ok(())
