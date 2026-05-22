@@ -24,25 +24,27 @@ const TONE_BINS: usize = 256;
 const LUT_SIZE: usize = 17;
 
 fn main() -> Result<()> {
-  println!("=== Step 10-11: Apply Full Pipeline ===\n");
+  println!("=== Step 10-11: Apply Full Pipeline (All Methods) ===\n");
 
-  // Load tone curve
+  // Define all LUT files to process
+  let lut_methods = vec![
+    ("nn", "residual_lut.cube", "final_clone.jpg"),                     // Baseline NN
+    ("trilinear", "residual_lut_trilinear.cube", "final_clone_trilinear.jpg"),
+    ("idw", "residual_lut_idw.cube", "final_clone_idw.jpg"),
+    ("knn", "residual_lut_knn.cube", "final_clone_knn.jpg"),
+    ("rbf", "residual_lut_rbf.cube", "final_clone_rbf.jpg"),
+    ("gpr", "residual_lut_gpr.cube", "final_clone_gpr.jpg"),
+    ("kriging", "residual_lut_kriging.cube", "final_clone_kriging.jpg"),
+  ];
+
+  // Load tone curve (shared by all methods)
   println!("Loading tone curve from outputs/second_method/tone_curve.csv...");
   let tone_curve = load_tone_curve("outputs/second_method/tone_curve.csv")?;
   println!("Loaded {} tone curve bins", tone_curve.len());
 
-  // Load residual LUT
-  println!("Loading residual LUT from outputs/second_method/residual_lut.cube...");
-  let residual_lut = load_cube_lut("outputs/second_method/residual_lut.cube")?;
-  println!(
-    "Loaded LUT with {} entries ({}^3)",
-    residual_lut.len(),
-    LUT_SIZE
-  );
-
-  // Load input image
-  println!("\nLoading input image from source/compare/standard/9.JPG...");
-  let input_img = imgcodecs::imread("source/compare/standard/9.JPG", imgcodecs::IMREAD_COLOR)?;
+  // Load input image (shared by all methods)
+  println!("Loading input image from source/compare/standard/10.JPG...");
+  let input_img = imgcodecs::imread("source/compare/standard/10.JPG", imgcodecs::IMREAD_COLOR)?;
   println!("Image size: {}x{}", input_img.cols(), input_img.rows());
 
   // Print pipeline parameters
@@ -57,28 +59,31 @@ fn main() -> Result<()> {
     println!("  [{}] = {:.6}", i, tone_curve[i]);
   }
 
-  println!("\nResidual LUT (first 5 entries):");
-  for i in 0..5 {
-    println!(
-      "  [{}] = [{:.6}, {:.6}, {:.6}]",
-      i, residual_lut[i][0], residual_lut[i][1], residual_lut[i][2]
-    );
+  // Process each method
+  println!("\n=== Processing All Methods ===");
+  for (method_name, lut_file, output_file) in &lut_methods {
+    println!("\n--- Method: {} ---", method_name.to_uppercase());
+
+    // Load residual LUT
+    let lut_path = format!("outputs/second_method/{}", lut_file);
+    println!("Loading {}...", lut_path);
+    let residual_lut = load_cube_lut(&lut_path)?;
+    println!("Loaded LUT with {} entries ({}^3)", residual_lut.len(), LUT_SIZE);
+
+    // Process image
+    println!("Processing image...");
+    let output_img = process_image(&input_img, &tone_curve, &residual_lut)?;
+
+    // Save output
+    let output_path = format!("outputs/second_method/{}", output_file);
+    println!("Saving to {}...", output_path);
+    imgcodecs::imwrite(&output_path, &output_img, &core::Vector::new())?;
+    println!("✓ Saved {}", output_path);
   }
 
-  // Process image
-  println!("\nProcessing image...");
-  let output_img = process_image(&input_img, &tone_curve, &residual_lut)?;
-
-  // Save output
-  println!("Saving output to outputs/second_method/final_clone.jpg...");
-  imgcodecs::imwrite(
-    "outputs/second_method/final_clone.jpg",
-    &output_img,
-    &core::Vector::new(),
-  )?;
-
   println!("\n=== Complete ===");
-  println!("Output saved to outputs/second_method/final_clone.jpg");
+  println!("Processed {} interpolation methods", lut_methods.len());
+  println!("All outputs saved to outputs/second_method/");
 
   Ok(())
 }
