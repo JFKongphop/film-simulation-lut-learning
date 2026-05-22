@@ -151,19 +151,25 @@ fn compute_channel_stats(img1: &Mat, img2: &Mat) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-  println!("📊 Comparing Matrix+Tone+Residual Pipeline Output with Ground Truth");
+  println!("📊 Comparing All Interpolation Methods with Ground Truth");
   println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
+  // Define all methods to compare
+  let methods = vec![
+    ("NN", "final_clone.jpg"),                     // Original baseline
+    ("Trilinear", "final_clone_trilinear.jpg"),
+    ("IDW", "final_clone_idw.jpg"),
+    ("KNN", "final_clone_knn.jpg"),
+    ("RBF", "final_clone_rbf.jpg"),
+    ("GPR", "final_clone_gpr.jpg"),
+    ("Kriging", "final_clone_kriging.jpg"),
+  ];
+
   // Paths
-  let input_path = "source/compare/standard/9.JPG";
-  let ground_truth_path = "source/compare/classic-chrome/9.JPG";
-  let pipeline_output_path = "outputs/second_method/final_clone.jpg";
+  let ground_truth_path = "source/compare/classic-chrome/10.JPG";
 
-  // Load images
-  println!("\n📷 Loading images...");
-  let input = imgcodecs::imread(input_path, imgcodecs::IMREAD_COLOR)?;
-  println!("   Input (standard): {}x{}", input.cols(), input.rows());
-
+  // Load ground truth once
+  println!("\n📷 Loading ground truth...");
   let ground_truth = imgcodecs::imread(ground_truth_path, imgcodecs::IMREAD_COLOR)?;
   println!(
     "   Ground truth (classic-chrome): {}x{}",
@@ -171,78 +177,88 @@ fn main() -> Result<()> {
     ground_truth.rows()
   );
 
-  let pipeline_output = imgcodecs::imread(pipeline_output_path, imgcodecs::IMREAD_COLOR)?;
-  println!(
-    "   Pipeline output: {}x{}",
-    pipeline_output.cols(),
-    pipeline_output.rows()
-  );
+  // Store results for summary table
+  let mut results = Vec::new();
 
-  // Verify dimensions match
-  if ground_truth.rows() != pipeline_output.rows() || ground_truth.cols() != pipeline_output.cols()
-  {
-    anyhow::bail!(
-      "Image dimensions don't match! Ground truth: {}x{}, Pipeline output: {}x{}",
-      ground_truth.cols(),
-      ground_truth.rows(),
+  // Evaluate each method
+  for (method_name, output_file) in &methods {
+    println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    println!("📐 Method: {}", method_name.to_uppercase());
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    // Load pipeline output
+    let output_path = format!("outputs/second_method/{}", output_file);
+    let pipeline_output = imgcodecs::imread(&output_path, imgcodecs::IMREAD_COLOR)?;
+    println!("   Loaded: {}", output_file);
+    println!(
+      "   Size: {}x{}",
       pipeline_output.cols(),
       pipeline_output.rows()
     );
+
+    // Verify dimensions match
+    if ground_truth.rows() != pipeline_output.rows()
+      || ground_truth.cols() != pipeline_output.cols()
+    {
+      anyhow::bail!(
+        "Image dimensions don't match for {}! Ground truth: {}x{}, Pipeline output: {}x{}",
+        method_name,
+        ground_truth.cols(),
+        ground_truth.rows(),
+        pipeline_output.cols(),
+        pipeline_output.rows()
+      );
+    }
+
+    // Compute MSE
+    println!("\n🔢 Computing metrics...");
+    let mse = compute_mse(&ground_truth, &pipeline_output)?;
+    let psnr = compute_psnr(mse);
+    let (avg_de, max_de, median_de) = compute_delta_e(&ground_truth, &pipeline_output)?;
+
+    println!("   MSE:        {:.6}", mse);
+    println!("   PSNR:       {:.4} dB", psnr);
+    println!("   Avg ΔE:     {:.4}", avg_de);
+    println!("   Median ΔE:  {:.4}", median_de);
+    println!("   Max ΔE:     {:.4}", max_de);
+
+    // Store results
+    results.push((method_name.to_string(), mse, psnr, avg_de, median_de, max_de));
   }
 
-  println!("\n✅ All images loaded successfully");
+  // Print summary table
+  println!("\n\n");
+  println!("╔═══════════════════════════════════════════════════════════════════════════╗");
+  println!("║                         📊 RESULTS SUMMARY                                ║");
+  println!("╚═══════════════════════════════════════════════════════════════════════════╝");
+  println!();
+  println!("┌────────────┬──────────┬───────────┬──────────┬──────────┬──────────┐");
+  println!("│ Method     │   MSE    │ PSNR (dB) │ Avg ΔE   │ Med ΔE   │ Max ΔE   │");
+  println!("├────────────┼──────────┼───────────┼──────────┼──────────┼──────────┤");
 
-  // Compute MSE
-  println!("\n🔢 Computing Mean Squared Error (MSE)...");
-  let mse = compute_mse(&ground_truth, &pipeline_output)?;
-  println!("   MSE: {:.6}", mse);
-
-  // Compute PSNR
-  println!("\n📡 Computing Peak Signal-to-Noise Ratio (PSNR)...");
-  let psnr = compute_psnr(mse);
-  println!("   PSNR: {:.4} dB", psnr);
-
-  // PSNR interpretation
-  if psnr >= 40.0 {
-    println!("   Quality: Excellent (nearly identical)");
-  } else if psnr >= 30.0 {
-    println!("   Quality: Good (minor differences)");
-  } else if psnr >= 20.0 {
-    println!("   Quality: Fair (noticeable differences)");
-  } else {
-    println!("   Quality: Poor (significant differences)");
+  for (method, mse, psnr, avg_de, median_de, max_de) in &results {
+    println!(
+      "│ {:10} │ {:8.4} │ {:9.4} │ {:8.4} │ {:8.4} │ {:8.2} │",
+      method, mse, psnr, avg_de, median_de, max_de
+    );
   }
 
-  // Compute Delta E
-  println!("\n🎨 Computing Delta E (color difference)...");
-  let (avg_de, max_de, median_de) = compute_delta_e(&ground_truth, &pipeline_output)?;
-  println!("   Average ΔE: {:.4}", avg_de);
-  println!("   Median ΔE:  {:.4}", median_de);
-  println!("   Max ΔE:     {:.4}", max_de);
+  println!("└────────────┴──────────┴───────────┴──────────┴──────────┴──────────┘");
 
-  // Delta E interpretation (CIE76 standard)
-  println!("\n   Interpretation:");
-  if avg_de < 1.0 {
-    println!("   ΔE < 1.0: Not perceptible by human eyes");
-  } else if avg_de < 2.0 {
-    println!("   ΔE 1.0-2.0: Perceptible through close observation");
-  } else if avg_de < 3.5 {
-    println!("   ΔE 2.0-3.5: Perceptible at a glance");
-  } else if avg_de < 5.0 {
-    println!("   ΔE 3.5-5.0: Clear difference, still acceptable");
-  } else {
-    println!("   ΔE > 5.0: Obvious difference");
-  }
+  // Find best methods
+  println!("\n🏆 Best Methods:");
+  let best_psnr = results
+    .iter()
+    .max_by(|a, b| a.2.partial_cmp(&b.2).unwrap())
+    .unwrap();
+  println!("   Highest PSNR:  {} ({:.4} dB)", best_psnr.0, best_psnr.2);
 
-  // Per-channel statistics
-  compute_channel_stats(&ground_truth, &pipeline_output)?;
+  let best_de = results
+    .iter()
+    .min_by(|a, b| a.3.partial_cmp(&b.3).unwrap())
+    .unwrap();
+  println!("   Lowest Avg ΔE: {} ({:.4})", best_de.0, best_de.3);
 
-  println!("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  println!("📋 Summary:");
-  println!("   MSE:        {:.6}", mse);
-  println!("   PSNR:       {:.4} dB", psnr);
-  println!("   Avg ΔE:     {:.4}", avg_de);
-  println!("   Median ΔE:  {:.4}", median_de);
   println!("\n🎉 Comparison complete!");
 
   Ok(())
