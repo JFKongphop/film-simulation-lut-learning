@@ -38,8 +38,24 @@ name = "matrix_tone_correction"
 path = "src/bin/second_method/matrix_tone_correction.rs"
 
 [[bin]]
+name = "matrix_tone_correction_perchannel"
+path = "src/bin/second_method/matrix_tone_correction_perchannel.rs"
+
+[[bin]]
 name = "build_residual_lut"
 path = "src/bin/second_method/build_residual_lut.rs"
+
+[[bin]]
+name = "build_residual_lut_33"
+path = "src/bin/second_method/build_residual_lut_33.rs"
+
+[[bin]]
+name = "build_residual_lut_65"
+path = "src/bin/second_method/build_residual_lut_65.rs"
+
+[[bin]]
+name = "build_residual_lut_perchannel"
+path = "src/bin/second_method/build_residual_lut_perchannel.rs"
 
 # Second Method: Alternative Interpolation Methods
 [[bin]]
@@ -71,8 +87,28 @@ name = "apply_pipeline"
 path = "src/bin/second_method/apply_pipeline.rs"
 
 [[bin]]
+name = "apply_pipeline_33"
+path = "src/bin/second_method/apply_pipeline_33.rs"
+
+[[bin]]
+name = "apply_pipeline_65"
+path = "src/bin/second_method/apply_pipeline_65.rs"
+
+[[bin]]
+name = "apply_pipeline_perchannel"
+path = "src/bin/second_method/apply_pipeline_perchannel.rs"
+
+[[bin]]
 name = "compare_pipeline"
 path = "src/bin/second_method/compare_pipeline.rs"
+
+[[bin]]
+name = "compare_lut_sizes"
+path = "src/bin/second_method/compare_lut_sizes.rs"
+
+[[bin]]
+name = "compare_perchannel"
+path = "src/bin/second_method/compare_perchannel.rs"
 
 # Visualization Tools
 [[bin]]
