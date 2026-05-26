@@ -26,7 +26,9 @@ struct InputRow {
   db: f32,
 }
 
+
 #[derive(Debug, Serialize)]
+#[allow(dead_code)]
 struct OutputRow {
   sr: f32,
   sg: f32,

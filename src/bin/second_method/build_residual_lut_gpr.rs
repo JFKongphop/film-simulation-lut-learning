@@ -8,7 +8,6 @@ const LUT_SIZE: usize = 17;
 const LUT_TOTAL: usize = LUT_SIZE * LUT_SIZE * LUT_SIZE;
 const SIGMA_F: f32 = 1.0; // Signal variance
 const LENGTH_SCALE: f32 = 2.5; // Length scale for kernel
-const NOISE_VARIANCE: f32 = 0.01; // Observation noise
 
 #[derive(Debug, Deserialize)]
 struct ResidualRow {

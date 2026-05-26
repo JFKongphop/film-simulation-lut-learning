@@ -122,6 +122,7 @@ fn compute_delta_e(img1: &Mat, img2: &Mat) -> Result<(f32, f32, f32)> {
 }
 
 /// Compute per-channel statistics
+#[allow(dead_code)]
 fn compute_channel_stats(img1: &Mat, img2: &Mat) -> Result<()> {
   let rows = img1.rows();
   let cols = img1.cols();
